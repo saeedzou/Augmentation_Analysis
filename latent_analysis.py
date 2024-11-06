@@ -96,3 +96,6 @@ def main():
 
     # save dataframe
     df.to_csv(configs['output']['dataframe_path'], index=False)
+
+if __name__ == '__main__':
+    main()
