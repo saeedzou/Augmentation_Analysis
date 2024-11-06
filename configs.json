@@ -1,0 +1,15 @@
+{
+    "device": "cuda",
+    "model_name": "whisper-tiny",
+    "models": {
+        "whisper-tiny": "openai/whisper-tiny",
+        "hezarai": "hezarai/whisper-small-fa",
+        "wav2vec2_v3_fa": "m3hrdadfi/wav2vec2-large-xlsr-persian-v3",
+        "wav2vec2_fa": "masoudmzb/wav2vec2-xlsr-multilingual-53-fa"
+    },
+    "audio_directory": "./",
+    "output":{
+        "save_dataframe" : true,
+        "dataframe_path" : "dataframe.csv"
+    } 
+}
