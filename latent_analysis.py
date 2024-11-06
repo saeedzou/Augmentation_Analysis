@@ -2,6 +2,7 @@ import torch
 import torchaudio
 import librosa
 import json
+import os
 from tqdm import tqdm
 from scipy.spatial.distance import cosine
 import numpy as np
@@ -12,11 +13,6 @@ from transformers import WhisperProcessor, WhisperModel, Wav2Vec2Model, Wav2Vec2
 from hezar.models import Model
 from augmentations import *
 
-# outline
-# 1. load and resample audio
-# 2. get input features
-# 3. get latent representation
-# 4. 
 MODELS = {'whisper-tiny': "openai/whisper-tiny",
           'hezarai': "hezarai/whisper-small-fa",
           'wav2vec2_v3_fa': "m3hrdadfi/wav2vec2-large-xlsr-persian-v3",
@@ -73,29 +69,23 @@ def collect_latents(audio_files, dataframe, model, processor, device, model_name
         dataframe.loc[i] = sample
     return dataframe
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# model, processor = get_model('whisper-tiny', device)
-# df = get_dataframe()
-# df = collect_latents(['cvfa/cvfa_8.wav'], df, model, processor, device, 'whisper-tiny')
 def main():
     # load json
     with open('configs.json') as f:
         configs = json.load(f)
-    
     # get device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     # get model
     model, processor = get_model(configs['model_name'], device)
-
     # get dataframe
     df = get_dataframe()
-
     # collect latents
-    df = collect_latents(configs['audio_directory'], df, model, processor, device, configs['model_name'], configs['augmentation_type'])
+    audio_files = [os.path.join(configs['audio_directory'], f) for f in os.listdir(configs['audio_directory']) if f.endswith(".wav")]
+    df = collect_latents(audio_files, df, model, processor, device, configs['model_name'], configs['augmentation_type'])
 
     # save dataframe
-    df.to_csv(configs['output']['dataframe_path'], index=False)
+    if configs['output']['save_dataframe']:
+        df.to_csv(configs['output']['dataframe_path'], index=False)
 
 if __name__ == '__main__':
     main()
