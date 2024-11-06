@@ -11,5 +11,6 @@
     "output":{
         "save_dataframe" : true,
         "dataframe_path" : "dataframe.csv"
-    } 
+    },
+    "augmentation_type": "original"
 }
