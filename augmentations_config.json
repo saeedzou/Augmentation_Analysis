@@ -1,0 +1,88 @@
+{
+    "augmentations": {
+        "add_background_noise": {
+            "sounds_path": "/content/ESC-50-master/audio/",
+            "p": 1.0
+        },
+        "add_color_noise": {
+            "min_snr_db": 5.0,
+            "max_snr_db": 40.0,
+            "min_f_decay": -6.0,
+            "max_f_decay": 6.0,
+            "p": 1.0,
+            "p_apply_a_weighting": 0.0,
+            "n_fft": 128
+        },
+        "add_gaussian_noise": {
+            "min_amplitude": 0.001,
+            "max_amplitude": 0.015,
+            "p": 1.0
+        },
+        "add_gaussian_snr": {
+            "min_snr_in_db": 5,
+            "max_snr_in_db": 20,
+            "p": 1.0
+        },
+        "air_absorption": {
+            "p": 1.0
+        },
+        "apply_impulse_response": {
+            "ir_path": "/content/rirs/RIRS_NOISES/real_rirs_isotropic_noises",
+            "p": 1.0
+        },
+        "band_pass_filter": {
+            "p": 1.0
+        },
+        "band_stop_filter": {
+            "p": 1.0
+        },
+        "bit_crush": {
+            "min_bit_depth": 5,
+            "max_bit_depth": 14,
+            "p": 1.0
+        },
+        "high_pass_filter": {
+            "p": 1.0
+        },
+        "high_shelf_filter": {
+            "p": 1.0
+        },
+        "limiter": {
+            "p": 1.0
+        },
+        "loudness_normalization": {
+            "p": 1.0
+        },
+        "low_pass_filter": {
+            "p": 1.0
+        },
+        "low_shelf_filter": {
+            "p": 1.0
+        },
+        "mp3_compression": {
+            "min_bitrate": 8,
+            "max_bitrate": 64,
+            "backend": "pydub",
+            "p": 1.0
+        },
+        "pitch_shift": {
+            "min_semitones": -4,
+            "max_semitones": 4,
+            "p": 1.0
+        },
+        "resample": {
+            "p": 1.0
+        },
+        "room_simulator": {
+            "p": 1.0
+        },
+        "time_mask": {
+            "p": 1.0
+        },
+        "time_stretch": {
+            "min_rate": 0.8,
+            "max_rate": 1.25,
+            "p": 1.0
+        }
+    }
+}
