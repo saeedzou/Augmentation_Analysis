@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from transformers import WhisperProcessor, WhisperModel, Wav2Vec2Model, Wav2Vec2Processor
+from transformers import WhisperProcessor, Wav2Vec2Processor, WhisperForConditionalGeneration, Wav2Vec2ForCTC
 from hezar.models import Model
 from augmentations import *
 
@@ -33,14 +33,23 @@ def get_model(model_name, device):
     assert model_name in MODELS
     if 'wav2vec2' in model_name:
         processor = Wav2Vec2Processor.from_pretrained(MODELS[model_name])
-        model = Wav2Vec2Model.from_pretrained(MODELS[model_name]).eval().to(device)
+        model = Wav2Vec2ForCTC.from_pretrained(MODELS[model_name]).eval().to(device)
     elif model_name == 'whisper-tiny':
         processor = WhisperProcessor.from_pretrained(MODELS[model_name])
-        model = WhisperModel.from_pretrained(MODELS[model_name]).eval().get_encoder().to(device)
+        model = WhisperForConditionalGeneration.from_pretrained(MODELS[model_name]).eval().to(device)
     elif model_name == 'hezarai':
         processor = WhisperProcessor.from_pretrained(MODELS['whisper-tiny'])
-        model = Model.load(MODELS[model_name]).whisper.model.eval().get_encoder().to(device)
+        model = Model.load(MODELS[model_name]).eval().to(device)
     return model, processor
+
+def get_encoder(model):
+    model_name = model.__class__.__name__
+    if model_name == 'Wav2Vec2ForCTC':
+        return model.wav2vec2
+    elif model_name == 'WhisperForConditionalGeneration':
+        return model.model.encoder
+    elif model_name == 'WhisperSpeechRecognition':
+        return model.whisper.model.encoder
 
 def get_input_features(audio_array, processor, device):
     input_features = processor(audio_array, sampling_rate=processor.feature_extractor.sampling_rate, return_tensors="pt")
@@ -52,19 +61,20 @@ def get_input_features(audio_array, processor, device):
         raise ValueError("Unkown processor type")
     return input_features.to(device)
 
-def get_latent_representation(model, input_features):
+def get_latent_representation(encoder, input_features):
     with torch.no_grad():
-        latent = model(input_features).last_hidden_state
+        latent = encoder(input_features).last_hidden_state
     return latent.mean(dim=1).squeeze().cpu().numpy()
 
 def collect_latents(audio_files, dataframe, model, processor, device, model_name, augmentation_type='original'):
+    encoder = get_encoder(model)
     for i, audio_file in tqdm(enumerate(audio_files)):
         audio_array = load_and_resample_audio(audio_file, processor)
         if augmentation_type != 'original':
             augmentation = get_augmentation(augmentation_type)
             audio_array = apply_augmentation(audio_array, augmentation)
         input_features = get_input_features(audio_array, processor, device)
-        latent = get_latent_representation(model, input_features)
+        latent = get_latent_representation(encoder, input_features)
         sample = {'audio_file': audio_file, 'model_name': model_name, 'type': augmentation_type, 'latent_representation': latent, 'latent_dim': latent.shape[0]}
         dataframe.loc[i] = sample
     return dataframe
