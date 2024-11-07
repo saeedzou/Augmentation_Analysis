@@ -29,6 +29,19 @@ def load_and_resample_audio(path, processor):
     speech_array = speech_array.squeeze().numpy()
     return librosa.resample(np.asarray(speech_array), orig_sr=sampling_rate, target_sr=processor.feature_extractor.sampling_rate)
 
+def get_model(model_name, device):
+    assert model_name in MODELS
+    if 'wav2vec2' in model_name:
+        processor = Wav2Vec2Processor.from_pretrained(MODELS[model_name])
+        model = Wav2Vec2Model.from_pretrained(MODELS[model_name]).eval().to(device)
+    elif model_name == 'whisper-tiny':
+        processor = WhisperProcessor.from_pretrained(MODELS[model_name])
+        model = WhisperModel.from_pretrained(MODELS[model_name]).eval().get_encoder().to(device)
+    elif model_name == 'hezarai':
+        processor = WhisperProcessor.from_pretrained(MODELS['whisper-tiny'])
+        model = Model.load(MODELS[model_name]).whisper.model.eval().get_encoder().to(device)
+    return model, processor
+
 def get_input_features(audio_array, processor, device):
     input_features = processor(audio_array, sampling_rate=processor.feature_extractor.sampling_rate, return_tensors="pt")
     if 'input_features' in input_features:
@@ -43,19 +56,6 @@ def get_latent_representation(model, input_features):
     with torch.no_grad():
         latent = model(input_features).last_hidden_state
     return latent.mean(dim=1).squeeze().cpu().numpy()
-
-def get_model(model_name, device):
-    assert model_name in MODELS
-    if 'wav2vec2' in model_name:
-        processor = Wav2Vec2Processor.from_pretrained(MODELS[model_name])
-        model = Wav2Vec2Model.from_pretrained(MODELS[model_name]).eval().to(device)
-    elif model_name == 'whisper-tiny':
-        processor = WhisperProcessor.from_pretrained(MODELS[model_name])
-        model = WhisperModel.from_pretrained(MODELS[model_name]).eval().get_encoder().to(device)
-    elif model_name == 'hezarai':
-        processor = WhisperProcessor.from_pretrained(MODELS['whisper-tiny'])
-        model = Model.load(MODELS[model_name]).whisper.model.eval().get_encoder().to(device)
-    return model, processor
 
 def collect_latents(audio_files, dataframe, model, processor, device, model_name, augmentation_type='original'):
     for i, audio_file in tqdm(enumerate(audio_files)):
