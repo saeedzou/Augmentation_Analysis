@@ -84,7 +84,7 @@ def get_transcription(model, processor, input_features, audio_array=None):
 
 def collect_latents(audio_files, dataframe, model, processor, device, model_name, augmentation_type='original'):
     encoder = get_encoder(model)
-    for i, audio_file in tqdm(enumerate(audio_files)):
+    for i, audio_file in tqdm(enumerate(audio_files), desc=f"Collecting latents for {model_name} ({augmentation_type})"):
         audio_array = load_and_resample_audio(audio_file, processor)
         if augmentation_type != 'original':
             augmentation = get_augmentation(augmentation_type)
