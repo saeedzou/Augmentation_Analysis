@@ -20,7 +20,7 @@ MODELS = {'whisper-tiny': "openai/whisper-tiny",
 
 def get_dataframe():
     # type can be original or augmentation name
-    columns = ['audio_file', 'model_name', 'type', 'latent_representation', 'latent_dim', 'transcription']
+    columns = ['audio_file', 'model_name', 'type', 'latent_representation', 'latent_dim', 'transcription', 'reference']
     return pd.DataFrame(columns=columns)
 
 # Helper function for resampling audio
@@ -89,7 +89,7 @@ def save_latent_to_file(latent, output_dir, file_name):
     np.savez_compressed(latent_path, latent=latent)
     return latent_path
 
-def collect_latents(audio_files, dataframe, model, processor, device, model_name, augmentation_type='original'):
+def collect_latents(audio_files, references, dataframe, model, processor, device, model_name, augmentation_type='original'):
     encoder = get_encoder(model)
     for i, audio_file in tqdm(enumerate(audio_files), desc=f"Collecting latents for {model_name} ({augmentation_type})"):
         audio_array = load_and_resample_audio(audio_file, processor)
@@ -101,9 +101,24 @@ def collect_latents(audio_files, dataframe, model, processor, device, model_name
         transcription = get_transcription(model, processor, input_features, audio_array)
         save_path = f"{os.path.basename(audio_file).split('.')[0]}_{model_name}_{augmentation_type}.npz"
         latent_path = save_latent_to_file(latent, './latents', save_path)
-        sample = {'audio_file': audio_file, 'model_name': model_name, 'type': augmentation_type, 'latent_representation': latent_path, 'latent_dim': latent.shape[0], 'transcription': transcription}
+        sample = {
+            'audio_file': audio_file, 
+            'model_name': model_name, 
+            'type': augmentation_type, 
+            'latent_representation': latent_path, 
+            'latent_dim': latent.shape[0], 
+            'transcription': transcription,
+            'reference': references[i]
+            }
         dataframe.loc[i] = sample
     return dataframe
+
+def load_references(text_files):
+    references = []
+    for text_file in text_files:
+        with open(text_file, 'r') as f:
+            references.append(f.read())
+    return references
 
 def main():
     # load json
@@ -116,9 +131,11 @@ def main():
     # get dataframe
     df = get_dataframe()
     # collect latents
-    audio_files = [os.path.join(configs['audio_directory'], f) for f in os.listdir(configs['audio_directory']) if f.endswith(".wav")]
-    df = collect_latents(audio_files, df, model, processor, device, configs['model_name'], configs['augmentation_type'])
-
+    files = [(os.path.join(configs['audio_directory'], f), os.path.join(configs['audio_directory'], f.split('.')[0]+'.txt')) for f in os.listdir(configs['audio_directory']) if f.endswith(".wav")]
+    audio_files = [f[0] for f in files]
+    text_files = [f[1] for f in files]
+    references = load_references(text_files)
+    df = collect_latents(audio_files, references,df, model, processor, device, configs['model_name'], configs['augmentation_type'])
     # save dataframe
     if configs['output']['save_dataframe']:
         df.to_csv(configs['output']['dataframe_path'], index=False)
