@@ -20,7 +20,7 @@ MODELS = {'whisper-tiny': "openai/whisper-tiny",
 
 def get_dataframe():
     # type can be original or augmentation name
-    columns = ['audio_file', 'model_name', 'type', 'latent_representation', 'latent_dim']
+    columns = ['audio_file', 'model_name', 'type', 'latent_representation', 'latent_dim', 'transcription']
     return pd.DataFrame(columns=columns)
 
 # Helper function for resampling audio
@@ -66,6 +66,22 @@ def get_latent_representation(encoder, input_features):
         latent = encoder(input_features).last_hidden_state
     return latent.mean(dim=1).squeeze().cpu().numpy()
 
+def get_transcription(model, processor, input_features, audio_array=None):
+    model_name = model.__class__.__name__
+    with torch.no_grad():
+        if model_name == 'Wav2Vec2ForCTC':
+            logits = model(input_features).logits
+            predicted_ids = torch.argmax(logits, dim=-1)
+        elif model_name == 'WhisperForConditionalGeneration':
+            forced_decoder_ids = processor.get_decoder_prompt_ids(language="persian", task="transcribe")
+            predicted_ids = model.generate(input_features, forced_decoder_ids=forced_decoder_ids)
+        elif model_name == 'WhisperSpeechRecognition':
+            transcription = model.predict(audio_array)[0]['text']
+            return transcription
+        
+        transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+        return transcription
+
 def collect_latents(audio_files, dataframe, model, processor, device, model_name, augmentation_type='original'):
     encoder = get_encoder(model)
     for i, audio_file in tqdm(enumerate(audio_files)):
@@ -75,7 +91,8 @@ def collect_latents(audio_files, dataframe, model, processor, device, model_name
             audio_array = apply_augmentation(audio_array, augmentation)
         input_features = get_input_features(audio_array, processor, device)
         latent = get_latent_representation(encoder, input_features)
-        sample = {'audio_file': audio_file, 'model_name': model_name, 'type': augmentation_type, 'latent_representation': latent, 'latent_dim': latent.shape[0]}
+        transcription = get_transcription(model, processor, input_features, audio_array)
+        sample = {'audio_file': audio_file, 'model_name': model_name, 'type': augmentation_type, 'latent_representation': latent, 'latent_dim': latent.shape[0], 'transcription': transcription}
         dataframe.loc[i] = sample
     return dataframe
 
