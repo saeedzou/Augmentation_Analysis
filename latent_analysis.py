@@ -82,6 +82,13 @@ def get_transcription(model, processor, input_features, audio_array=None):
         transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
         return transcription
 
+def save_latent_to_file(latent, output_dir, file_name):
+    """Save latent representation to .npz file and return the file path."""
+    os.makedirs(output_dir, exist_ok=True)
+    latent_path = os.path.join(output_dir, file_name)
+    np.savez_compressed(latent_path, latent=latent)
+    return latent_path
+
 def collect_latents(audio_files, dataframe, model, processor, device, model_name, augmentation_type='original'):
     encoder = get_encoder(model)
     for i, audio_file in tqdm(enumerate(audio_files), desc=f"Collecting latents for {model_name} ({augmentation_type})"):
@@ -92,7 +99,9 @@ def collect_latents(audio_files, dataframe, model, processor, device, model_name
         input_features = get_input_features(audio_array, processor, device)
         latent = get_latent_representation(encoder, input_features)
         transcription = get_transcription(model, processor, input_features, audio_array)
-        sample = {'audio_file': audio_file, 'model_name': model_name, 'type': augmentation_type, 'latent_representation': latent, 'latent_dim': latent.shape[0], 'transcription': transcription}
+        save_path = f"{os.path.basename(audio_file).split('.')[0]}_{model_name}_{augmentation_type}.npz"
+        latent_path = save_latent_to_file(latent, './latents', save_path)
+        sample = {'audio_file': audio_file, 'model_name': model_name, 'type': augmentation_type, 'latent_representation': latent_path, 'latent_dim': latent.shape[0], 'transcription': transcription}
         dataframe.loc[i] = sample
     return dataframe
 
